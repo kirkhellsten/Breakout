@@ -1,3 +1,5 @@
+
+
 #include <windows.h>
 #include <iostream>
 #include <cstdlib>
@@ -10,6 +12,8 @@
 #include <allegro5/allegro_primitives.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
+#include <allegro5/allegro_audio.h>
+
 
 #include "BrickMap.h"
 
@@ -163,6 +167,7 @@ struct Paddle{
 };
 
 void setBallsStuckToMove(vector<Ball*> *balls);
+void Tone(int a_nFrequency, int a_nVolume, int a_nDuration);
 
 void setTexts() {
     powerUpsText[LASER] = "LAS";
@@ -213,9 +218,9 @@ void setColors() {
     brickFillColors[GREENBRICK] = al_map_rgb(0,255,0);
     brickFillColors[WHITEBRICK] = al_map_rgb(255,255,255);
     brickFillColors[ORANGEBRICK] = al_map_rgb(255,165,0);
-    brickFillColors[MEDIUMBRICK] = al_map_rgb(220,20,60);
+    brickFillColors[MEDIUMBRICK] = al_map_rgb(255,0,0);
     brickFillColors[HARDBRICK] = al_map_rgb(128,0,0);
-    brickFillColors[UNBREAKABLEBRICK] = al_map_rgb(255,215,0);
+    brickFillColors[UNBREAKABLEBRICK] = al_map_rgb(131,131,131);
 
     brickBorderColors[BRICKNONE] = al_map_rgb(0,0,0);
     brickBorderColors[REDBRICK] = al_map_rgb(0,0,0);
@@ -223,7 +228,7 @@ void setColors() {
     brickBorderColors[GREENBRICK] = al_map_rgb(0,0,0);
     brickBorderColors[WHITEBRICK] = al_map_rgb(0,0,0);
     brickBorderColors[ORANGEBRICK] = al_map_rgb(0,0,0);
-    brickBorderColors[MEDIUMBRICK] = al_map_rgb(0,0,0);
+    brickBorderColors[MEDIUMBRICK] = al_map_rgb(100,0,0);
     brickBorderColors[HARDBRICK] = al_map_rgb(0,0,0);
     brickBorderColors[UNBREAKABLEBRICK] = al_map_rgb(0,0,0);
 
@@ -376,6 +381,8 @@ void createLaserBeams(vector<Laser*> *lasers, Paddle *paddle, LASERTYPE laserTyp
         al_start_timer(LBRTimer);
         return;
     }
+
+    Tone(500, 100, 20);
 
     Laser *laserBulletLeft = new Laser();
     laserBulletLeft->x = paddle->x+LASER_SIDE_WIDTH/2;
@@ -593,7 +600,9 @@ void setMap(BrickMap *brickMap) {
          { BLUEBRICK, BLUEBRICK, BLUEBRICK, BLUEBRICK, BLUEBRICK, BLUEBRICK, BLUEBRICK, BLUEBRICK, BLUEBRICK, BLUEBRICK,
            BLUEBRICK, BLUEBRICK, BLUEBRICK, BLUEBRICK, BLUEBRICK, BLUEBRICK, BLUEBRICK, BLUEBRICK, BLUEBRICK, BLUEBRICK},
          { GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK,
-           GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK}};
+           GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK, GREENBRICK},
+         { UNBREAKABLEBRICK, UNBREAKABLEBRICK, UNBREAKABLEBRICK, UNBREAKABLEBRICK, UNBREAKABLEBRICK, UNBREAKABLEBRICK, UNBREAKABLEBRICK, UNBREAKABLEBRICK, UNBREAKABLEBRICK, UNBREAKABLEBRICK,
+           MEDIUMBRICK, MEDIUMBRICK, MEDIUMBRICK, MEDIUMBRICK, MEDIUMBRICK, MEDIUMBRICK, MEDIUMBRICK, MEDIUMBRICK, MEDIUMBRICK, MEDIUMBRICK}};
 
     vector<vector<BRICKTYPE>> bricks (NUM_BRICKS_PER_ROW);
     for (int i = 0; i < bricks.size(); ++i) {
@@ -839,21 +848,26 @@ void drawBrickMap(BrickMap *brickMap) {
         for (int ii = 0; ii < brickMap->bricks[i].size(); ++ii) {
             BRICKTYPE brickType = brickMap->bricks[i][ii];
 
-            if (brickType != BRICKNONE) {
-                al_draw_filled_rectangle(ii * BRICK_WIDTH,
-                                         i * BRICK_HEIGHT,
-                                         ii * BRICK_WIDTH + BRICK_WIDTH,
-                                         i * BRICK_HEIGHT + BRICK_HEIGHT,
+            if (brickType == MEDIUMBRICK) {
+
+                al_draw_filled_rectangle(ii * BRICK_WIDTH+BRICK_BORDER_THICKNESS,
+                                         i * BRICK_HEIGHT+BRICK_BORDER_THICKNESS,
+                                         ii * BRICK_WIDTH + BRICK_WIDTH-BRICK_BORDER_THICKNESS,
+                                         i * BRICK_HEIGHT + BRICK_HEIGHT-BRICK_BORDER_THICKNESS,
+                                         brickBorderColors[brickType]);
+
+                al_draw_filled_rectangle(ii * BRICK_WIDTH+BRICK_BORDER_THICKNESS*2,
+                                         i * BRICK_HEIGHT+BRICK_BORDER_THICKNESS*2,
+                                         ii * BRICK_WIDTH + BRICK_WIDTH-BRICK_BORDER_THICKNESS*2,
+                                         i * BRICK_HEIGHT + BRICK_HEIGHT-BRICK_BORDER_THICKNESS*2,
                                          brickFillColors[brickType]);
 
-
-                al_draw_rectangle(i * BRICK_WIDTH,
-                                         i * BRICK_HEIGHT,
-                                         ii * BRICK_WIDTH + BRICK_WIDTH,
-                                         i * BRICK_HEIGHT + BRICK_HEIGHT,
-                                         brickBorderColors[brickType],
-                                         BRICK_BORDER_THICKNESS);
-
+            } else {
+                al_draw_filled_rectangle(ii * BRICK_WIDTH+BRICK_BORDER_THICKNESS,
+                                         i * BRICK_HEIGHT+BRICK_BORDER_THICKNESS,
+                                         ii * BRICK_WIDTH + BRICK_WIDTH-BRICK_BORDER_THICKNESS,
+                                         i * BRICK_HEIGHT + BRICK_HEIGHT-BRICK_BORDER_THICKNESS,
+                                         brickFillColors[brickType]);
             }
 
         }
@@ -1030,6 +1044,8 @@ void setPowerUpsPosition(vector<PowerUp*> *powerUps, Paddle *paddle, vector<Ball
             powerUp->x < paddle->x + paddle->width &&
             powerUp->y < paddle->y + paddle->height) {
 
+            Tone(200, 100, 250);
+
             if (powerUp->powerUpType == LASER) {
                 activateLaserPowerUp(paddle, balls);
             } else if (powerUp->powerUpType == STICKYPADDLE) {
@@ -1072,13 +1088,17 @@ void setLaserBulletsPosition(vector<Laser*> *lasers, BrickMap *brickMap) {
 
         if (isLaserBulletCollidingWithBricks(laser, brickMap, &brickCollisionInfo)) {
 
-            if (brickCollisionInfo.brickType > BRICKNONE) {
+            Tone(1000, 100, 25);
+            if (laser->laserType == LASERTYPE_THRU) {
                 brickMap->bricks[brickCollisionInfo.row][brickCollisionInfo.column] = BRICKNONE;
             }
+
+            brickMap->setBrickWhenHit(brickCollisionInfo.row, brickCollisionInfo.column);
 
             if (laser->laserType == LASERTYPE_NORMAL) {
                 deleteLaserBullet(lasers, laser);
                 i--;
+
                 continue;
             }
 
@@ -1153,23 +1173,32 @@ void setBallsPosition(vector<Ball*> *balls, Paddle *paddle, BrickMap *brickMap, 
             if (ball->x < minimumX) {
                 ball->angle = reflectAngle(ball->angle, X_AXIS);
                 ball->x = minimumX;
+                Tone(1000, 100, 25);
             } else if (ball->x > maximumX) {
                 ball->angle = reflectAngle(ball->angle, X_AXIS);
                 ball->x = maximumX;
+                Tone(1000, 100, 25);
             }
 
             if (ball->y < minimumY) {
                 ball->angle = reflectAngle(ball->angle, Y_AXIS);
                 ball->y = minimumY;
+                Tone(1000, 100, 25);
             } else if (ball->y > displayHeight) {
 
                 deleteBall(balls, (*balls)[i]);
 
-
+                Tone(300, 100, 25);
             }
 
 
             if (isBallCollidingWithPaddle(ball, paddle)) {
+
+                if (paddle->paddleType == PADDLETYPE_STICKY) {
+                    Tone(175, 100, 125);
+                } else {
+                    Tone(2000, 100, 25);
+                }
 
                 vector<double> previousBallLocation = getPreviousBallLocation(ball);
 
@@ -1197,30 +1226,33 @@ void setBallsPosition(vector<Ball*> *balls, Paddle *paddle, BrickMap *brickMap, 
 
             if (isBallCollidingWithBrick(ball, brickMap, &brickCollisionInfo)) {
 
+                Tone(1000, 100, 25);
+
+                if (brickCollisionInfo.brickType != UNBREAKABLEBRICK) {
+                    int randPowerUpCreation = rand() % 100;
+                    if (randPowerUpCreation < POWER_UP_APPEAR_CHANGE_PER_100) {
 
 
-                int randPowerUpCreation = rand() % 100;
-                if (randPowerUpCreation < POWER_UP_APPEAR_CHANGE_PER_100) {
+                        int numberOfPowerUpsPer100 = 100 / (POWER_UP_MAX - 1);
+                        POWERUPTYPE randPowerUpType = (POWERUPTYPE) ((rand() % 100) / numberOfPowerUpsPer100);
 
 
-                    int numberOfPowerUpsPer100 = 100 / (POWER_UP_MAX - 1);
-                    POWERUPTYPE randPowerUpType = (POWERUPTYPE) ((rand() % 100) / numberOfPowerUpsPer100);
+                        PowerUp *powerUp = new PowerUp();
+                        powerUp->powerUpType = randPowerUpType,
+                        //powerUp->powerUpType = DEATH;
+                        powerUp->angle = ball->angle;
+                        powerUp->speed = ball->speed / 2;
+                        powerUp->x = ball->x - POWER_UP_WIDTH / 2;
+                        powerUp->y = ball->y - POWER_UP_HEIGHT / 2;
+                        powerUp->thickness = POWER_UP_BORDER_THICKNESS;
+
+                        powerUps->push_back(powerUp);
+                        cout << "Maximum number of power ups: " << POWER_UP_MAX << endl;
+                        cout << "Power Up Container Size: " << powerUps->size() << endl;
+                        cout << "Power Up Created: " << randPowerUpType << endl;
 
 
-                    PowerUp *powerUp = new PowerUp();
-                    powerUp->powerUpType = randPowerUpType,
-                    //powerUp->powerUpType = DEATH;
-                    powerUp->angle = ball->angle;
-                    powerUp->speed = ball->speed / 2;
-                    powerUp->x = ball->x - POWER_UP_WIDTH / 2;
-                    powerUp->y = ball->y - POWER_UP_HEIGHT / 2;
-                    powerUp->thickness = POWER_UP_BORDER_THICKNESS;
-
-                    powerUps->push_back(powerUp);
-                    cout << "Maximum number of power ups: " << POWER_UP_MAX << endl;
-                    cout << "Power Up Container Size: " << powerUps->size() << endl;
-                    cout << "Power Up Created: " << randPowerUpType << endl;
-
+                    }
 
                 }
 
@@ -1235,9 +1267,8 @@ void setBallsPosition(vector<Ball*> *balls, Paddle *paddle, BrickMap *brickMap, 
                         ball->angle = reflectAngle(ball->angle, X_AXIS);
                     }
 
-                    if (brickCollisionInfo.brickType > BRICKNONE) {
-                        brickMap->bricks[brickCollisionInfo.row][brickCollisionInfo.column] = BRICKNONE;
-                    }
+
+                    brickMap->setBrickWhenHit(brickCollisionInfo.row, brickCollisionInfo.column);
 
                 }
 
@@ -1388,6 +1419,48 @@ void drawLevelBorder(ALLEGRO_DISPLAY *display) {
     al_draw_rectangle(0, 0, displayWidth, displayHeight, levelBorderColor[0], 5);
 }
 
+
+void Tone(int a_nFrequency, int a_nVolume, int a_nDuration)
+{
+    int PI = atan(1)*4;
+
+    int nSampleRate = 48000;
+    if (a_nVolume > 255)
+    {
+        a_nVolume = 255;
+    }
+    else if (a_nVolume<0)
+    {
+        a_nVolume = 0;
+    }
+
+    int nInternalVolume = (30000 * a_nVolume)/255;
+    unsigned int samples = (nSampleRate * a_nDuration) / 1000.0;
+    unsigned long sample_size=al_get_channel_count(ALLEGRO_CHANNEL_CONF_1) *al_get_audio_depth_size(ALLEGRO_AUDIO_DEPTH_INT16);
+    unsigned long bytes = samples * sample_size;
+
+    void *buff = NULL;
+    buff = al_malloc(bytes);
+
+    ALLEGRO_SAMPLE *m_pSample;
+
+    al_destroy_sample(m_pSample);
+    m_pSample = al_create_sample (buff,samples, nSampleRate ,ALLEGRO_AUDIO_DEPTH_INT16,ALLEGRO_CHANNEL_CONF_1,true);
+    double dFi = double(2 * PI * a_nFrequency) / nSampleRate;
+
+    if (m_pSample!=NULL)
+    {
+        int16_t * ptr = (int16_t *) al_get_sample_data(m_pSample);
+        for (unsigned int i=0;i<samples;i++)
+        {
+             ptr[i]= sin(i * dFi) * nInternalVolume;
+
+        }
+        al_play_sample (m_pSample,1.0,0,1.0,ALLEGRO_PLAYMODE_ONCE,NULL);
+    }
+}
+
+
 int WINAPI WinMain(HINSTANCE inst,HINSTANCE prev,LPSTR cmd,int show)
 {
 
@@ -1397,6 +1470,8 @@ int WINAPI WinMain(HINSTANCE inst,HINSTANCE prev,LPSTR cmd,int show)
     al_init_primitives_addon();
     al_install_mouse();
     al_init_font_addon();
+    al_install_audio();
+    al_reserve_samples(16);
 
     //al_set_new_display_flags(ALLEGRO_FULLSCREEN);
 
@@ -1445,6 +1520,8 @@ int WINAPI WinMain(HINSTANCE inst,HINSTANCE prev,LPSTR cmd,int show)
 
     gameState = GAMESTATE_RUNNING;
 
+
+
     while (gameState != GAMESTATE_EXIT) {
 
         static int displayWidth = al_get_display_width(display);
@@ -1467,7 +1544,7 @@ int WINAPI WinMain(HINSTANCE inst,HINSTANCE prev,LPSTR cmd,int show)
 
             cout << brickMap->getNumberOfActiveBricks() << endl;
             if (brickMap->getNumberOfActiveBricks() == 0) {
-                gameState == GAMESTATE_EXIT;
+                gameState = GAMESTATE_EXIT;
             }
 
         } else if (e.type == ALLEGRO_EVENT_MOUSE_AXES) {
@@ -1491,6 +1568,8 @@ int WINAPI WinMain(HINSTANCE inst,HINSTANCE prev,LPSTR cmd,int show)
             if (paddle->paddleType == PADDLETYPE_LASER) {
                 if (state.buttons & 1) {
                     cout << "Create Laser Beam " << endl;
+
+
 
                     LASERTYPE laserType;
 
@@ -1525,9 +1604,10 @@ int WINAPI WinMain(HINSTANCE inst,HINSTANCE prev,LPSTR cmd,int show)
             al_clear_to_color(al_map_rgb(0,0,0));
 
 
-            drawLaserBullets(&lasers);
+
             drawPaddle(paddle);
             drawBrickMap(brickMap);
+            drawLaserBullets(&lasers);
             drawBalls(&balls);
             drawPowerUps(&powerUps);
             drawLives(numberOfLives);
